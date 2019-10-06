@@ -57,5 +57,13 @@ func main() {
 		w.Write([]byte("ok."))
 	})
 
+	r.Get("/cron", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok."))
+	})
+
+	r.Post("/sms", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok."))
+	})
+
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
