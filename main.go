@@ -83,11 +83,17 @@ func main() {
 	})
 
 	r.Get("/cron", func(w http.ResponseWriter, r *http.Request) {
-		err := SendMessage(r.Context(), "+17077998675", "10k steps")
-		if err != nil {
-			log.WithError(err).Error("couldn't send")
-			http.Error(w, http.StatusText(500), 500)
-			return
+		goals := [][]string{
+			[]string{"+17077998675", "10k steps"},
+		}
+
+		for _, goal := range goals {
+			err := SendMessage(r.Context(), goal[0], goal[1])
+			if err != nil {
+				log.WithError(err).Error("couldn't send")
+				http.Error(w, http.StatusText(500), 500)
+				return
+			}
 		}
 
 		w.Write([]byte("ok."))
