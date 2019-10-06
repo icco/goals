@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/BTBurke/twiml"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/icco/gotwilio"
 	sdLogging "github.com/icco/logrus-stackdriver-formatter"
 	"github.com/sirupsen/logrus"
 )
@@ -16,7 +16,6 @@ var (
 	log = InitLogging()
 )
 
-// "github.com/icco/gotwilio"
 // func SendMessage(ctx context.Context, to, goal string) error {
 // 	accountSid := "ABC123..........ABC123"
 // 	authToken := "ABC123..........ABC123"
@@ -34,8 +33,8 @@ var (
 // 	return nil
 // }
 
-func RecieveMessage(ctx context.Context, msg twiml.Sms) error {
-	log.WithFields(logrus.Fields{"parsed": msg}).Infof("recieved sms")
+func RecieveMessage(ctx context.Context, msg gotwilio.SMSWebhook) error {
+	log.WithContext(ctx).WithFields(logrus.Fields{"parsed": msg}).Infof("recieved sms")
 	return nil
 }
 
@@ -66,14 +65,20 @@ func main() {
 	})
 
 	r.Post("/sms", func(w http.ResponseWriter, r *http.Request) {
-		var sms twiml.Sms
-		if err := twiml.Bind(&sms, r); err != nil {
+		err := r.ParseForm()
+		if err != nil {
 			log.WithError(err).Error("couldn't parse")
 			http.Error(w, http.StatusText(400), 400)
-			return
 		}
 
-		err := RecieveMessage(r.Context(), sms)
+		var sms gotwilio.SMSWebhook
+		err = gotwilio.DecodeWebhook(r.PostForm, &sms)
+		if err != nil {
+			log.WithError(err).Error("couldn't decode")
+			http.Error(w, http.StatusText(400), 400)
+		}
+
+		err = RecieveMessage(r.Context(), sms)
 		if err != nil {
 			log.WithError(err).Error("couldn't recieve")
 			http.Error(w, http.StatusText(400), 400)
