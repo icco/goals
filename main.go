@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	sdLogging "github.com/icco/logrus-stackdriver-formatter"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -34,7 +35,7 @@ var (
 // }
 
 func RecieveMessage(ctx context.Context, msg twiml.Sms) error {
-	log.Infof("recieved %+v", msg)
+	log.WithFields(logrus.Fields{"parsed": msg}).Infof("recieved sms")
 	return nil
 }
 
