@@ -69,13 +69,13 @@ func main() {
 		if err != nil {
 			log.WithError(err).Error("couldn't parse")
 			http.Error(w, http.StatusText(400), 400)
+			return
 		}
 
 		var sms gotwilio.SMSWebhook
 		err = gotwilio.DecodeWebhook(r.PostForm, &sms)
 		if err != nil {
 			log.WithError(err).Error("couldn't decode")
-			http.Error(w, http.StatusText(400), 400)
 		}
 
 		err = RecieveMessage(r.Context(), sms)
