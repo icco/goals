@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"os"
 
 	"github.com/BTBurke/twiml"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/cors"
-	"github.com/icco/gotwilio"
 	sdLogging "github.com/icco/logrus-stackdriver-formatter"
 )
 
@@ -15,24 +15,27 @@ var (
 	log = InitLogging()
 )
 
-func SendMessage(ctx context.Context, to, goal string) error {
-	accountSid := "ABC123..........ABC123"
-	authToken := "ABC123..........ABC123"
-	twilio := gotwilio.NewTwilioClient(accountSid, authToken)
+// "github.com/icco/gotwilio"
+// func SendMessage(ctx context.Context, to, goal string) error {
+// 	accountSid := "ABC123..........ABC123"
+// 	authToken := "ABC123..........ABC123"
+// 	twilio := gotwilio.NewTwilioClient(accountSid, authToken)
+//
+// 	// https://www.twilio.com/console/phone-numbers/PN87a39ded4c2f6ba4b938f2a7c0d46579
+// 	from := "+17073294103"
+// 	message := fmt.Sprintf("Hi, did you complete your goal of \"%s\" yesterday?", goal)
+// 	resp, err := twilio.SendSMS(from, to, message, "", applicationSid)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	log.Infof("sent %+v", resp)
+// 	return nil
+// }
 
-	from := "+15555555555"
-	message := fmt.Sprintf("Hi, did you complete your goal of \"%s\" yesterday?", goal)
-	resp, err := twilio.SendSMS(from, to, message, "", applicationSid)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("sent %+v", resp)
+func RecieveMessage(ctx context.Context, msg twiml.Sms) error {
+	log.Infof("recieved %+v", msg)
 	return nil
-}
-
-func RecieveMessage(ctx context.Context, msg twilml.Sms) error {
-
 }
 
 func main() {
@@ -62,7 +65,19 @@ func main() {
 	})
 
 	r.Post("/sms", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok."))
+		var sms twiml.Sms
+		if err := twiml.Bind(&sms, r); err != nil {
+			log.WithError(err).Error("couldn't parse")
+			http.Error(w, http.StatusText(400), 400)
+			return
+		}
+
+		err := RecieveMessage(r.Context(), sms)
+		if err != nil {
+			log.WithError(err).Error("couldn't recieve")
+			http.Error(w, http.StatusText(400), 400)
+			return
+		}
 	})
 
 	log.Fatal(http.ListenAndServe(":"+port, r))
