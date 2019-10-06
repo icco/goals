@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -19,25 +20,30 @@ var (
 	log = InitLogging()
 )
 
-// func SendMessage(ctx context.Context, to, goal string) error {
-// 	accountSid := "ABC123..........ABC123"
-// 	authToken := "ABC123..........ABC123"
-// 	twilio := gotwilio.NewTwilioClient(accountSid, authToken)
-//
-// 	// https://www.twilio.com/console/phone-numbers/PN87a39ded4c2f6ba4b938f2a7c0d46579
-// 	from := "+17073294103"
-// 	message := fmt.Sprintf("Hi, did you complete your goal of \"%s\" yesterday?", goal)
-// 	resp, err := twilio.SendSMS(from, to, message, "", applicationSid)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	log.Infof("sent %+v", resp)
-// 	return nil
-// }
+func SendMessage(ctx context.Context, to, goal string) error {
+	accountSid := os.Getenv("TWILIO_ACCOUNT_SID")
+	applicationSid := os.Getenv("TWILIO_APPLICATION_SID")
+	authToken := os.Getenv("TWILIO_AUTH_TOKEN")
+	twilio := gotwilio.NewTwilioClient(accountSid, authToken)
+
+	// https://www.twilio.com/console/phone-numbers/PN87a39ded4c2f6ba4b938f2a7c0d46579
+	from := "+17073294103"
+	message := fmt.Sprintf("Hi, did you complete your goal of \"%s\" yesterday?", goal)
+	resp, exp, err := twilio.SendSMS(from, to, message, "", applicationSid)
+	if err != nil {
+		return err
+	}
+
+	if exp != nil {
+		return fmt.Errorf(exp.Error())
+	}
+
+	log.WithFields(logrus.Fields{"response": resp, "message": message}).Info("sent")
+	return nil
+}
 
 func RecieveMessage(ctx context.Context, msg gotwilio.SMSWebhook) error {
-	log.WithContext(ctx).WithFields(logrus.Fields{"parsed": msg}).Infof("recieved sms")
+	log.WithContext(ctx).WithFields(logrus.Fields{"parsed": msg}).Info("recieved sms")
 
 	messageText := strings.TrimFunc(strings.ToLower(msg.Body), func(r rune) bool {
 		return !unicode.IsLetter(r)
@@ -77,6 +83,13 @@ func main() {
 	})
 
 	r.Get("/cron", func(w http.ResponseWriter, r *http.Request) {
+		err := SendMessage(r.Context(), "+17077998675", "10k steps")
+		if err != nil {
+			log.WithError(err).Error("couldn't send")
+			http.Error(w, http.StatusText(500), 500)
+			return
+		}
+
 		w.Write([]byte("ok."))
 	})
 
