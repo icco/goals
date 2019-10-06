@@ -4,14 +4,15 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/icco/gotwilio"
 	sdLogging "github.com/icco/logrus-stackdriver-formatter"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/jdkato/prose.v2"
 )
 
 var (
@@ -38,12 +39,11 @@ var (
 func RecieveMessage(ctx context.Context, msg gotwilio.SMSWebhook) error {
 	log.WithContext(ctx).WithFields(logrus.Fields{"parsed": msg}).Infof("recieved sms")
 
-	doc, _ := prose.NewDocument(msg.Body)
-	for _, ent := range doc.Entities() {
-		log.WithField("entity", ent).Debug("found entity")
-	}
+	messageText := strings.TrimFunc(strings.ToLower(msg.Body), func(r rune) bool {
+		return !unicode.IsLetter(r)
+	})
 
-	ack := false
+	ack := strings.Split(messageText, "")[0] == "y"
 	from := msg.From
 	when := time.Now()
 
