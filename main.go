@@ -20,6 +20,7 @@ var (
 	log = InitLogging()
 )
 
+// SendMessage texts a message.
 func SendMessage(ctx context.Context, to, goal string) error {
 	accountSid := os.Getenv("TWILIO_ACCOUNT_SID")
 	applicationSid := os.Getenv("TWILIO_APPLICATION_SID")
@@ -42,6 +43,7 @@ func SendMessage(ctx context.Context, to, goal string) error {
 	return nil
 }
 
+// RecieveMessage parses a twilio message.
 func RecieveMessage(ctx context.Context, msg gotwilio.SMSWebhook) error {
 	log.WithContext(ctx).WithFields(logrus.Fields{"parsed": msg}).Info("recieved sms")
 
@@ -56,6 +58,7 @@ func RecieveMessage(ctx context.Context, msg gotwilio.SMSWebhook) error {
 	return SaveMessageLog(ctx, from, when, ack)
 }
 
+// SaveMessageLog is unimplemented, but could write stuff to a db.
 func SaveMessageLog(ctx context.Context, from string, when time.Time, ack bool) error {
 	return nil
 }
