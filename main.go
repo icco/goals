@@ -45,7 +45,7 @@ func SendMessage(ctx context.Context, to, goal string) error {
 
 // RecieveMessage parses a twilio message.
 func RecieveMessage(ctx context.Context, msg gotwilio.SMSWebhook) error {
-	log.WithContext(ctx).WithFields(logrus.Fields{"parsed": msg}).Info("recieved sms")
+	log.WithContext(ctx).WithFields(logrus.Fields{"parsed": msg}).Info("received sms")
 
 	messageText := strings.TrimFunc(strings.ToLower(msg.Body), func(r rune) bool {
 		return !unicode.IsLetter(r)
@@ -119,7 +119,7 @@ func main() {
 
 		err = RecieveMessage(r.Context(), sms)
 		if err != nil {
-			log.WithError(err).Error("couldn't recieve")
+			log.WithError(err).Error("couldn't receive")
 			http.Error(w, http.StatusText(400), 400)
 			return
 		}
