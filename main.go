@@ -87,8 +87,8 @@ func main() {
 
 	r.Get("/cron", func(w http.ResponseWriter, r *http.Request) {
 		goals := [][]string{
-			[]string{"+17077998675", "10k steps"},
-			[]string{"+15125788969", "exercise, floss and no alcohol"},
+			{"+17077998675", "10k steps"},
+			{"+15125788969", "exercise, floss and no alcohol"},
 		}
 
 		for _, goal := range goals {
