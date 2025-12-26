@@ -11,8 +11,9 @@ github.com/go-chi/chi v4.0.4+incompatible h1:7fVnpr0gAXG15uDbtH+LwSeMztvIvlHrBNR
 github.com/go-chi/chi v4.0.4+incompatible/go.mod h1:eB3wogJHnLi3x/kFX2A+IbTBlXxmMeXJVKy9tTv1XzQ=
 github.com/go-stack/stack v1.8.0 h1:5SgMzNM5HxrEjV0ww2lTmX6E2Izsfxas4+YHWRs3Lsk=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
-github.com/gorilla/schema v1.1.0 h1:CamqUDOFUBqzrvxuz2vEwo8+SUdwsluFh7IlzJh30LY=
 github.com/gorilla/schema v1.1.0/go.mod h1:kgLaKoK1FELgZqMAVxx/5cbj0kT+57qxUrAlIO2eleU=
+github.com/gorilla/schema v1.4.1 h1:jUg5hUjCSDZpNGLuXQOgIWGdlgrIdYvgQ0wZtdK1M3E=
+github.com/gorilla/schema v1.4.1/go.mod h1:Dg5SSm5PV60mhF2NFaTV1xuYYj8tV8NOPRo4FggUMnM=
 github.com/hellofresh/logging-go v0.3.0 h1:ZB5dLqPJoMJGjRwuteiqeG+2aB2nEvdzxmB1EBnaLq0=
 github.com/hellofresh/logging-go v0.3.0/go.mod h1:gwpkafA8SxN1O16aSWH4DMCp0+48miJHeeyaI5bl6HY=
 github.com/icco/gotwilio v0.0.0-20191006195551-4d79cad7d4bb h1:eE7EqdwVmk3F6dieJfNLZ8Na/sXQFc0WrxOEw+hlUuc=
