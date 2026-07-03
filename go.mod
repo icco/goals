@@ -1,6 +1,6 @@
 module github.com/icco/goals
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/go-chi/chi v4.0.4+incompatible
@@ -15,6 +15,6 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/hellofresh/logging-go v0.3.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 )
