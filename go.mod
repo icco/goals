@@ -1,4 +1,4 @@
-module github.com/icco/goals
+module go.icco.me/goals
 
 go 1.25.0
 
