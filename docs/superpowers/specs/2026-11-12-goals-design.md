@@ -52,7 +52,7 @@ The current repo is a 2019 sketch: it sends an SMS for a hardcoded goal list and
 
 ### Login
 
-Phone plus a 6-digit code through Twilio Verify, which brings its own rate limits and fraud guard against SMS pumping. The signup form needs a consent checkbox with A2P language (program name, message frequency "1 message per day", "Msg & data rates may apply", "Reply STOP to cancel, HELP for help", links to terms and privacy). Login for an existing phone skips the checkbox. Every state-changing form carries a CSRF token.
+Phone plus a 6-digit code through Twilio Verify, which brings its own rate limits and fraud guard against SMS pumping. The signup form needs a consent checkbox with A2P language (program name, message frequency "1 message per day", "Msg & data rates may apply", "Reply STOP to cancel, HELP for help", links to terms and privacy). Login for an existing phone skips the checkbox. Cross-site form posts are blocked with the standard library's `http.CrossOriginProtection`.
 
 ### Reminders
 
