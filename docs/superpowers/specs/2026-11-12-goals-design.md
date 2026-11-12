@@ -83,6 +83,13 @@ A streak counts consecutive local days with `done` ending today or yesterday. A 
 
 Twilio sits behind an interface with a fake. Tests cover the reply parser, streaks, scheduler idempotency and timezone handling, webhook signature rejection, the login flow, and handlers against dbtest Postgres. Coverage floor is 80%.
 
+## Builder calls
+
+- `Reminder` stores the ordered goal IDs it listed, so a reply's numbers map to that message even if goals change afterward.
+- Signup accepts `+1` numbers only, since A2P 10DLC covers US numbers.
+- Deleting an account hard-deletes the user and all their goals, check-ins, reminders, and sessions.
+- Twilio secrets live in GCP Secret Manager as `mist-goals-twilio-*` and are read by `update.sh`, like the database URL. The owner fills in the values.
+
 ## Left to the builder
 
 - Visual style: simple, readable, in line with timeclimbers.com.
