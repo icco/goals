@@ -98,7 +98,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) checkIn(w http.ResponseWriter, r *http.Request) {
 	u := currentUser(r)
-	goalID, err := strconv.ParseUint(r.PostFormValue("goal"), 10, 64)
+	goalID, err := parseID(r.PostFormValue("goal"))
 	if err != nil {
 		s.notFound(w, r)
 		return
@@ -113,7 +113,7 @@ func (s *Server) checkIn(w http.ResponseWriter, r *http.Request) {
 		s.render(w, r, http.StatusBadRequest, "error", page{Title: "Error", Error: fmt.Sprintf("You can only change the last %d days.", editDays)})
 		return
 	}
-	err = s.Store.SetCheckIn(r.Context(), u.ID, uint(goalID), date.Format(store.DateLayout), r.PostFormValue("done") == "true", store.SourceWeb)
+	err = s.Store.SetCheckIn(r.Context(), u.ID, goalID, date.Format(store.DateLayout), r.PostFormValue("done") == "true", store.SourceWeb)
 	if errors.Is(err, store.ErrNotFound) {
 		s.notFound(w, r)
 		return
@@ -156,12 +156,16 @@ func (s *Server) goalResult(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-func goalID(r *http.Request) (uint, error) {
-	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 64)
+func parseID(s string) (uint, error) {
+	id, err := strconv.ParseUint(s, 10, 32)
 	if err != nil {
 		return 0, store.ErrNotFound
 	}
 	return uint(id), nil
+}
+
+func goalID(r *http.Request) (uint, error) {
+	return parseID(chi.URLParam(r, "id"))
 }
 
 func (s *Server) addGoal(w http.ResponseWriter, r *http.Request) {

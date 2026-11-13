@@ -96,6 +96,8 @@ func TestGoalCRUD(t *testing.T) {
 	expect(t, h.do(http.MethodPost, "/app/goals/"+id(0)+"/archive", url.Values{}, c), http.StatusSeeOther)
 	expect(t, h.do(http.MethodPost, "/app/goals/"+id(0)+"/move", url.Values{"delta": {"sideways"}}, c), http.StatusBadRequest)
 	expect(t, h.do(http.MethodPost, "/app/goals/abc", url.Values{"text": {"x"}}, c), http.StatusNotFound)
+	expect(t, h.do(http.MethodPost, "/app/goals/18446744073709551617", url.Values{"text": {"x"}}, c), http.StatusNotFound)
+	expect(t, h.do(http.MethodPost, "/app/checkin", url.Values{"goal": {"4294967297"}, "date": {"2026-11-12"}, "done": {"true"}}, c), http.StatusNotFound)
 	expect(t, h.do(http.MethodPost, "/app/goals/9999/archive", url.Values{}, c), http.StatusNotFound)
 	expect(t, h.do(http.MethodPost, "/app/goals/"+id(1), url.Values{"text": {""}}, c), http.StatusBadRequest)
 
