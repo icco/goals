@@ -18,6 +18,11 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 // name with an error when the text could not be sent. The phone stays out of
 // URLs so request logs never record it.
 func (s *Server) sendCode(w http.ResponseWriter, r *http.Request, name string, p page) {
+	if s.CodeLimit != nil && !s.CodeLimit.Allow() {
+		p.Error = "Lots of people are signing in right now. Please try again in a few minutes."
+		s.render(w, r, http.StatusTooManyRequests, name, p)
+		return
+	}
 	err := s.SMS.StartVerify(r.Context(), p.Phone)
 	switch {
 	case errors.Is(err, sms.ErrDisabled):

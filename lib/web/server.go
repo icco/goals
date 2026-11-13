@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.icco.me/goals/lib/sms"
 	"go.icco.me/goals/lib/store"
+	"go.icco.me/gutil/httpx"
 	"go.icco.me/gutil/logging"
 	"go.uber.org/zap"
 )
@@ -32,7 +33,10 @@ type Server struct {
 	SMS     sms.Client
 	BaseURL string
 	Now     func() time.Time
-	pages   map[string]*template.Template
+	// CodeLimit, when set, caps login codes sent site-wide so a bot cannot run
+	// up the Twilio bill.
+	CodeLimit *httpx.Limiter
+	pages     map[string]*template.Template
 }
 
 type userKey struct{}

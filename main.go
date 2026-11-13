@@ -18,6 +18,7 @@ import (
 	"go.icco.me/goals/lib/sms"
 	"go.icco.me/goals/lib/store"
 	"go.icco.me/goals/lib/web"
+	"go.icco.me/gutil/httpx"
 	"go.icco.me/gutil/logging"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
@@ -61,7 +62,7 @@ func run(log *zap.SugaredLogger) error {
 		log.Warn("TWILIO_* is not fully set: texts and logins are disabled")
 	}
 
-	app := &web.Server{Store: st, SMS: client, BaseURL: baseURL, Now: time.Now}
+	app := &web.Server{Store: st, SMS: client, BaseURL: baseURL, Now: time.Now, CodeLimit: httpx.NewLimiter(30, 10*time.Minute)}
 	srv := &http.Server{
 		Addr:              ":" + getenv("PORT", "8080"),
 		Handler:           router(log.Desugar(), app.Routes()),

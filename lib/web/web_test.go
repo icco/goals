@@ -12,6 +12,7 @@ import (
 	"go.icco.me/goals/lib/dbtest"
 	"go.icco.me/goals/lib/sms"
 	"go.icco.me/goals/lib/store"
+	"go.icco.me/gutil/httpx"
 )
 
 const phone = "+15555550100"
@@ -197,4 +198,27 @@ func TestSMSDisabledMessage(t *testing.T) {
 	expect(t, h.do(http.MethodPost, "/signup", url.Values{"phone": {phone}, "consent": {"on"}}, nil), http.StatusServiceUnavailable, "not set up yet")
 	h.sms.FailSend = errors.New("twilio 500")
 	expect(t, h.do(http.MethodPost, "/signup", url.Values{"phone": {phone}, "consent": {"on"}}, nil), http.StatusBadGateway, "try again")
+}
+
+func TestCodeRateLimit(t *testing.T) {
+	h := newHarness(t)
+	h.srv.CodeLimit = httpx.NewLimiter(1, time.Hour)
+	expect(t, h.do(http.MethodPost, "/signup", url.Values{"phone": {phone}, "consent": {"on"}}, nil), http.StatusOK)
+	expect(t, h.do(http.MethodPost, "/signup", url.Values{"phone": {"+15555550101"}, "consent": {"on"}}, nil), http.StatusTooManyRequests, "try again in a few minutes")
+	if h.sms.Started("+15555550101") {
+		t.Error("code sent past the limit")
+	}
+}
+
+func TestNoInlineStyles(t *testing.T) {
+	h := newHarness(t)
+	u, c := h.login(phone)
+	if _, err := h.store.AddGoal(t.Context(), u.ID, "read"); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/", "/login", "/terms", "/privacy", "/app", "/app/goals", "/settings"} {
+		if body := h.do(http.MethodGet, path, nil, c).Body.String(); strings.Contains(body, " style=") || strings.Contains(body, "<style") || strings.Contains(body, "<script") {
+			t.Errorf("%s has inline style or script, which the CSP blocks", path)
+		}
+	}
 }

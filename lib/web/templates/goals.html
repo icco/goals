@@ -6,7 +6,7 @@
 {{- range $i, $g := .Goals}}
 <div class="card edit">
   <span class="muted">{{inc $i}}.</span>
-  <form class="edit" method="post" action="/app/goals/{{$g.ID}}" style="flex:1">
+  <form class="edit grow" method="post" action="/app/goals/{{$g.ID}}">
     <input type="text" name="text" value="{{$g.Text}}" maxlength="140" required aria-label="Goal {{inc $i}}">
     <button class="ghost" type="submit">Save</button>
   </form>
