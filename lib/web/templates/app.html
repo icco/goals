@@ -1,0 +1,41 @@
+{{define "content"}}
+<h1>{{.TodayLong}}</h1>
+{{- if not .Rows}}
+<p>You have no goals yet. <a href="/app/goals">Add your first goal</a>.</p>
+{{- else}}
+<p class="muted small">Tap a square from the last week to change it. Green is done, red is missed.</p>
+{{- end}}
+{{- $today := .Today}}
+{{- range .Rows}}
+<div class="card">
+  <div class="goal">
+    <span class="text">{{.Goal.Text}}</span>
+    <div class="toggle">
+      <form method="post" action="/app/checkin">
+        <input type="hidden" name="goal" value="{{.Goal.ID}}"><input type="hidden" name="date" value="{{$today}}"><input type="hidden" name="done" value="true">
+        <button class="yes" type="submit" aria-pressed="{{eq .Today "done"}}">Did it</button>
+      </form>
+      <form method="post" action="/app/checkin">
+        <input type="hidden" name="goal" value="{{.Goal.ID}}"><input type="hidden" name="date" value="{{$today}}"><input type="hidden" name="done" value="false">
+        <button class="no" type="submit" aria-pressed="{{eq .Today "missed"}}">Didn't</button>
+      </form>
+    </div>
+  </div>
+  <p class="muted small">{{.Current}} day streak · best {{.Best}}</p>
+  <div class="grid" aria-label="Last 30 days">
+  {{- $id := .Goal.ID}}
+  {{- range .Cells}}
+    {{- if .Editable}}
+    <form method="post" action="/app/checkin">
+      <input type="hidden" name="goal" value="{{$id}}"><input type="hidden" name="date" value="{{.Date}}"><input type="hidden" name="done" value="{{ne .State "done"}}">
+      <button class="cell {{.State}}" type="submit" title="{{.Label}}: {{if .State}}{{.State}}{{else}}no answer{{end}}" aria-label="{{.Label}}: {{if .State}}{{.State}}{{else}}no answer{{end}}"></button>
+    </form>
+    {{- else}}
+    <span class="cell {{.State}}" title="{{.Label}}: {{if .State}}{{.State}}{{else}}no answer{{end}}"></span>
+    {{- end}}
+  {{- end}}
+  </div>
+</div>
+{{- end}}
+<p class="small"><a href="/app/goals">Edit goals</a></p>
+{{end}}

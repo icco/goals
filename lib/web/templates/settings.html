@@ -1,0 +1,31 @@
+{{define "content"}}
+<h1>Settings</h1>
+{{- if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+<form class="stack" method="post" action="/settings">
+  <label>Timezone
+    <select name="timezone">
+    {{- $tz := .User.Timezone}}
+    {{- range .Zones}}
+      <option value="{{.}}"{{if eq . $tz}} selected{{end}}>{{.}}</option>
+    {{- end}}
+    </select>
+  </label>
+  <label>Text me at
+    <input type="time" name="time" value="{{.RemindTime}}" required>
+  </label>
+  <label class="check">
+    <input type="checkbox" name="paused" value="on"{{if .User.Paused}} checked{{end}}>
+    <span>Pause daily texts</span>
+  </label>
+  <button type="submit">Save</button>
+</form>
+{{- if .User.OptedOut}}
+<p class="error">You replied STOP, so we won't text you. Text START to the goals number to turn texts back on.</p>
+{{- end}}
+<h2>Delete account</h2>
+<p class="muted small">This deletes your number, goals, and history right away. It can't be undone.</p>
+<form class="edit" method="post" action="/settings/delete">
+  <input type="text" name="confirm" placeholder='type "delete"' required aria-label="Type delete to confirm">
+  <button class="danger" type="submit">Delete my account</button>
+</form>
+{{end}}

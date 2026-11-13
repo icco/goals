@@ -1,0 +1,14 @@
+{{define "content"}}
+<h1>Enter your code</h1>
+<p>We texted a 6-digit code to {{.Phone}}.</p>
+{{- if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+<form class="stack" method="post" action="/verify">
+  <input type="hidden" name="phone" value="{{.Phone}}">
+  {{- if .Consent}}<input type="hidden" name="consent" value="on">{{end}}
+  <label>Code
+    <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" required autofocus>
+  </label>
+  <button type="submit">Continue</button>
+</form>
+<p class="muted small">No text? <a href="/login">Try again</a>.</p>
+{{end}}

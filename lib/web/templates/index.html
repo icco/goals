@@ -1,0 +1,27 @@
+{{define "content"}}
+<h1>One text a day about the things you meant to do.</h1>
+{{- if .User}}
+<p><a href="/app">Go to today's goals →</a></p>
+{{- else}}
+<p>List a few daily goals. Every evening goals texts you the list. Reply <strong>y</strong>, <strong>n</strong>, or the numbers you did, like <strong>1 3</strong>, and watch your streaks grow.</p>
+<div class="card">
+<pre class="small">goals: did you do these today?
+1. read 20 pages
+2. run
+Reply y, n, or the numbers you did (e.g. "1 3").</pre>
+</div>
+<h2>Sign up</h2>
+{{- if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+<form class="stack" method="post" action="/signup">
+  <label>Mobile number (US)
+    <input type="tel" name="phone" autocomplete="tel" placeholder="555-555-0100" value="{{.Phone}}" required>
+  </label>
+  <label class="check">
+    <input type="checkbox" name="consent" value="on"{{if .Consent}} checked{{end}}>
+    <span>I agree to receive automated texts from goals: a login code when I sign in and one reminder a day. Message and data rates may apply. Message frequency varies. Reply STOP to cancel, HELP for help. See the <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.</span>
+  </label>
+  <button type="submit">Text me a code</button>
+</form>
+<p class="muted small">Already signed up? <a href="/login">Log in</a>.</p>
+{{- end}}
+{{end}}

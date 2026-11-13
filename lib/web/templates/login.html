@@ -1,0 +1,11 @@
+{{define "content"}}
+<h1>Log in</h1>
+{{- if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+<form class="stack" method="post" action="/login">
+  <label>Mobile number
+    <input type="tel" name="phone" autocomplete="tel" placeholder="555-555-0100" value="{{.Phone}}" required>
+  </label>
+  <button type="submit">Text me a code</button>
+</form>
+<p class="muted small">New here? <a href="/">Sign up</a>.</p>
+{{end}}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · goals</title>
+<meta name="description" content="One text a day asking whether you did what you meant to do.">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <a class="brand" href="/">goals</a>
+  <nav>
+  {{- if .User}}
+    <a href="/app">Today</a>
+    <a href="/app/goals">Goals</a>
+    <a href="/settings">Settings</a>
+    <form class="inline" method="post" action="/logout"><button class="link" type="submit">Log out</button></form>
+  {{- else}}
+    <a href="/login">Log in</a>
+  {{- end}}
+  </nav>
+</header>
+<main>
+{{template "content" .}}
+</main>
+<footer>
+  <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://github.com/icco/goals">Source</a> · Part of <a href="https://timeclimbers.com">timeclimbers</a>
+</footer>
+</body>
+</html>
