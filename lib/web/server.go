@@ -102,7 +102,7 @@ func (s *Server) Routes() http.Handler {
 	r.Post("/signup", s.signup)
 	r.Get("/login", s.static("login", "Log in"))
 	r.Post("/login", s.loginPost)
-	r.Get("/verify", s.verifyForm)
+	r.Get("/verify", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/login", http.StatusSeeOther) })
 	r.Post("/verify", s.verifyPost)
 	r.Post("/logout", s.logout)
 	r.Post("/sms", s.webhook)

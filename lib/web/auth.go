@@ -3,7 +3,6 @@ package web
 import (
 	"errors"
 	"net/http"
-	"net/url"
 
 	"go.icco.me/goals/lib/sms"
 	"go.icco.me/goals/lib/store"
@@ -15,8 +14,9 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, http.StatusOK, "index", page{Title: "Text yourself your goals"})
 }
 
-// sendCode texts a login code and redirects to the code form, or re-renders
-// page name with an error when the text could not be sent.
+// sendCode texts a login code and shows the code form, or re-renders page
+// name with an error when the text could not be sent. The phone stays out of
+// URLs so request logs never record it.
 func (s *Server) sendCode(w http.ResponseWriter, r *http.Request, name string, p page) {
 	err := s.SMS.StartVerify(r.Context(), p.Phone)
 	switch {
@@ -30,11 +30,8 @@ func (s *Server) sendCode(w http.ResponseWriter, r *http.Request, name string, p
 		s.render(w, r, http.StatusBadGateway, name, p)
 		return
 	}
-	q := url.Values{"phone": {p.Phone}}
-	if p.Consent {
-		q.Set("consent", "on")
-	}
-	http.Redirect(w, r, "/verify?"+q.Encode(), http.StatusSeeOther)
+	p.Title = "Enter your code"
+	s.render(w, r, http.StatusOK, "verify", p)
 }
 
 func (s *Server) signup(w http.ResponseWriter, r *http.Request) {
@@ -74,14 +71,6 @@ func (s *Server) loginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.sendCode(w, r, "login", p)
-}
-
-func (s *Server) verifyForm(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, http.StatusOK, "verify", page{
-		Title:   "Enter your code",
-		Phone:   r.URL.Query().Get("phone"),
-		Consent: r.URL.Query().Get("consent") == "on",
-	})
 }
 
 func (s *Server) verifyPost(w http.ResponseWriter, r *http.Request) {

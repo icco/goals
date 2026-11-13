@@ -103,15 +103,13 @@ func TestSignupRequiresConsent(t *testing.T) {
 func TestSignupAndVerify(t *testing.T) {
 	h := newHarness(t)
 	rec := h.do(http.MethodPost, "/signup", url.Values{"phone": {"(555) 555-0100"}, "consent": {"on"}}, nil)
-	expect(t, rec, http.StatusSeeOther)
-	loc := rec.Header().Get("Location")
-	if !h.sms.Started(phone) || loc != "/verify?consent=on&phone=%2B15555550100" {
-		t.Fatalf("started = %v, location = %q", h.sms.Started(phone), loc)
+	expect(t, rec, http.StatusOK, `value="&#43;15555550100"`, `name="consent" value="on"`)
+	if !h.sms.Started(phone) {
+		t.Fatal("no code sent")
 	}
 	if _, err := h.store.UserByPhone(t.Context(), phone); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("user created before verification: %v", err)
 	}
-	expect(t, h.do(http.MethodGet, loc, nil, nil), http.StatusOK, `value="&#43;15555550100"`, `name="consent" value="on"`)
 
 	expect(t, h.do(http.MethodPost, "/verify", url.Values{"phone": {phone}, "consent": {"on"}, "code": {"000000"}}, nil), http.StatusBadRequest, "match")
 	rec = h.do(http.MethodPost, "/verify", url.Values{"phone": {phone}, "consent": {"on"}, "code": {sms.FakeCode}}, nil)
@@ -153,10 +151,11 @@ func TestLoginExistingUser(t *testing.T) {
 	h.login(phone)
 	expect(t, h.do(http.MethodGet, "/login", nil, nil), http.StatusOK)
 	rec := h.do(http.MethodPost, "/login", url.Values{"phone": {"555.555.0100"}}, nil)
-	expect(t, rec, http.StatusSeeOther)
-	if !h.sms.Started(phone) || rec.Header().Get("Location") != "/verify?phone=%2B15555550100" {
-		t.Fatalf("started = %v, location = %q", h.sms.Started(phone), rec.Header().Get("Location"))
+	expect(t, rec, http.StatusOK, `value="&#43;15555550100"`)
+	if !h.sms.Started(phone) || strings.Contains(rec.Body.String(), `name="consent"`) {
+		t.Fatal("login: no code sent, or consent carried")
 	}
+	expect(t, h.do(http.MethodGet, "/verify", nil, nil), http.StatusSeeOther)
 	expect(t, h.do(http.MethodPost, "/verify", url.Values{"phone": {phone}, "code": {sms.FakeCode}}, nil), http.StatusSeeOther)
 }
 
