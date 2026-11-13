@@ -1,127 +1,110 @@
+// Package main serves goals: a website and a daily text that track whether
+// you did what you meant to do each day.
 package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
-	"unicode"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
-	"github.com/icco/gotwilio"
-	sdLogging "github.com/icco/logrus-stackdriver-formatter"
-	"github.com/sirupsen/logrus"
+	"github.com/go-chi/chi/v5"
+	"go.icco.me/goals/lib/remind"
+	"go.icco.me/goals/lib/sms"
+	"go.icco.me/goals/lib/store"
+	"go.icco.me/goals/lib/web"
+	"go.icco.me/gutil/httpx"
+	"go.icco.me/gutil/logging"
+	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-var (
-	log = InitLogging()
-)
+const service = "goals"
 
-// SendMessage texts a message.
-func SendMessage(ctx context.Context, to, goal string) error {
-	accountSid := os.Getenv("TWILIO_ACCOUNT_SID")
-	applicationSid := os.Getenv("TWILIO_APPLICATION_SID")
-	authToken := os.Getenv("TWILIO_AUTH_TOKEN")
-	twilio := gotwilio.NewTwilioClient(accountSid, authToken)
+func main() {
+	log := logging.Must(logging.NewLogger(service))
+	err := run(log)
+	logging.Sync(log)
+	if err != nil {
+		log.Fatalw("goals", zap.Error(err))
+	}
+}
 
-	// https://www.twilio.com/console/phone-numbers/PN87a39ded4c2f6ba4b938f2a7c0d46579
-	from := "+17073294103"
-	message := fmt.Sprintf("Hi, did you complete your goal of \"%s\" yesterday?", goal)
-	resp, exp, err := twilio.SendSMS(from, to, message, "", applicationSid)
+func run(log *zap.SugaredLogger) error {
+	ctx, stop := signal.NotifyContext(logging.NewContext(context.Background(), log), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	baseURL := strings.TrimSuffix(os.Getenv("BASE_URL"), "/")
+	if baseURL == "" {
+		return errors.New("BASE_URL is required")
+	}
+	db, err := openDB(os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return fmt.Errorf("open database: %w", err)
+	}
+	st, err := store.New(ctx, db)
 	if err != nil {
 		return err
 	}
 
-	if exp != nil {
-		return fmt.Errorf(exp.Error())
+	cfg := sms.ConfigFromEnv(os.Getenv)
+	client := sms.New(cfg)
+	if cfg.Enabled() {
+		go (&remind.Scheduler{Store: st, Sender: client, Now: time.Now}).Run(ctx, time.Minute)
+	} else {
+		log.Warn("TWILIO_* is not fully set: texts and logins are disabled")
 	}
 
-	log.WithFields(logrus.Fields{"response": resp, "message": message}).Info("sent")
+	app := &web.Server{Store: st, SMS: client, BaseURL: baseURL, Now: time.Now, CodeLimit: httpx.NewLimiter(30, 10*time.Minute)}
+	srv := &http.Server{
+		Addr:              ":" + getenv("PORT", "8080"),
+		Handler:           router(log.Desugar(), app.Routes()),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Warnw("shutdown", zap.Error(err))
+		}
+	}()
+	log.Infow("listening", "addr", srv.Addr)
+	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("serve: %w", err)
+	}
 	return nil
 }
 
-// RecieveMessage parses a twilio message.
-func RecieveMessage(ctx context.Context, msg gotwilio.SMSWebhook) error {
-	log.WithContext(ctx).WithFields(logrus.Fields{"parsed": msg}).Info("received sms")
-
-	messageText := strings.TrimFunc(strings.ToLower(msg.Body), func(r rune) bool {
-		return !unicode.IsLetter(r)
-	})
-
-	ack := strings.Split(messageText, "")[0] == "y"
-	from := msg.From
-	when := time.Now()
-
-	return SaveMessageLog(ctx, from, when, ack)
-}
-
-// SaveMessageLog is unimplemented, but could write stuff to a db.
-func SaveMessageLog(ctx context.Context, from string, when time.Time, ack bool) error {
-	return nil
-}
-
-func main() {
-	port := "8080"
-	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
-		port = fromEnv
+// openDB connects to Postgres. Queries log nothing themselves; callers log the
+// errors they return.
+func openDB(dsn string) (*gorm.DB, error) {
+	if dsn == "" {
+		return nil, errors.New("DATABASE_URL is required")
 	}
-	log.Printf("Starting up on http://localhost:%s", port)
+	return gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+}
 
+func getenv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func router(log *zap.Logger, app http.Handler) http.Handler {
 	r := chi.NewRouter()
-
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(sdLogging.LoggingMiddleware(log))
-
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`hi! Please see <a href="https://github.com/icco/goals">github.com/icco/goals</a> for more information.`))
+	r.Use(logging.Middleware(log))
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok"))
 	})
-
-	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok."))
-	})
-
-	r.Get("/cron", func(w http.ResponseWriter, r *http.Request) {
-		goals := [][]string{
-		}
-
-		for _, goal := range goals {
-			err := SendMessage(r.Context(), goal[0], goal[1])
-			if err != nil {
-				log.WithError(err).Error("couldn't send")
-				http.Error(w, http.StatusText(500), 500)
-				return
-			}
-		}
-
-		w.Write([]byte("ok."))
-	})
-
-	r.Post("/sms", func(w http.ResponseWriter, r *http.Request) {
-		err := r.ParseForm()
-		if err != nil {
-			log.WithError(err).Error("couldn't parse")
-			http.Error(w, http.StatusText(400), 400)
-			return
-		}
-
-		var sms gotwilio.SMSWebhook
-		err = gotwilio.DecodeWebhook(r.PostForm, &sms)
-		if err != nil {
-			log.WithError(err).Error("couldn't decode")
-		}
-
-		err = RecieveMessage(r.Context(), sms)
-		if err != nil {
-			log.WithError(err).Error("couldn't receive")
-			http.Error(w, http.StatusText(400), 400)
-			return
-		}
-	})
-
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	r.Mount("/", app)
+	return r
 }

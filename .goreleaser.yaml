@@ -1,0 +1,41 @@
+# GoReleaser configuration.
+# https://goreleaser.com
+version: 2
+project_name: goals
+builds:
+  - main: .
+    binary: goals
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+changelog:
+  use: git
+  sort: asc
+  groups:
+    - title: Features
+      regexp: ^feat
+      order: 0
+    - title: Bug Fixes
+      regexp: ^fix
+      order: 1
+    - title: Other Changes
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^style:'
+release:
+  github:
+    owner: icco
+    name: goals
+  mode: replace
+  footer: |
+    ---
+    **Full Changelog**: https://github.com/icco/goals/compare/{{ .PreviousTag }}...{{ .Tag }}

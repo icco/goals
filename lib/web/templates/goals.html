@@ -1,0 +1,30 @@
+{{define "content"}}
+<h1>Your goals</h1>
+<p class="muted">They're listed in this order in your daily text. Up to {{.MaxGoals}}.</p>
+{{- if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+{{- $n := len .Goals}}
+{{- range $i, $g := .Goals}}
+<div class="card edit">
+  <span class="muted">{{inc $i}}.</span>
+  <form class="edit grow" method="post" action="/app/goals/{{$g.ID}}">
+    <input type="text" name="text" value="{{$g.Text}}" maxlength="140" required aria-label="Goal {{inc $i}}">
+    <button class="ghost" type="submit">Save</button>
+  </form>
+  {{- if gt $i 0}}
+  <form method="post" action="/app/goals/{{$g.ID}}/move"><input type="hidden" name="delta" value="-1"><button class="ghost" type="submit" aria-label="Move up">↑</button></form>
+  {{- end}}
+  {{- if lt (inc $i) $n}}
+  <form method="post" action="/app/goals/{{$g.ID}}/move"><input type="hidden" name="delta" value="1"><button class="ghost" type="submit" aria-label="Move down">↓</button></form>
+  {{- end}}
+  <form method="post" action="/app/goals/{{$g.ID}}/archive"><button class="ghost" type="submit">Remove</button></form>
+</div>
+{{- end}}
+{{- if lt $n .MaxGoals}}
+<h2>Add a goal</h2>
+<form class="edit" method="post" action="/app/goals">
+  <input type="text" name="text" maxlength="140" placeholder="read 20 pages" required aria-label="New goal">
+  <button type="submit">Add</button>
+</form>
+{{- end}}
+<p class="muted small">Removing a goal keeps its history but stops asking about it.</p>
+{{end}}
