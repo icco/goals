@@ -108,7 +108,7 @@ func openDB(dsn string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := db.Use(gormtracing.NewPlugin(gormtracing.WithoutMetrics())); err != nil {
+	if err := db.Use(gormtracing.NewPlugin(gormtracing.WithoutMetrics(), gormtracing.WithoutQueryVariables())); err != nil {
 		return nil, fmt.Errorf("use tracing plugin: %w", err)
 	}
 	return db, nil
