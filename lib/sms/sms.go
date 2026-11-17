@@ -70,7 +70,8 @@ func (c Config) Enabled() bool {
 // ErrDisabled.
 type Twilio struct {
 	cfg       Config
-	rest      *twilio.RestClient
+	transport http.RoundTripper
+	timeout   time.Duration
 	validator client.RequestValidator
 }
 
@@ -80,23 +81,61 @@ func New(c Config) *Twilio {
 }
 
 func newTwilio(c Config, hc *http.Client) *Twilio {
-	t := &Twilio{cfg: c}
+	t := &Twilio{cfg: c, timeout: 30 * time.Second}
+	if hc != nil {
+		if hc.Timeout > 0 {
+			t.timeout = hc.Timeout
+		}
+		if hc.Transport != nil {
+			t.transport = hc.Transport
+		} else {
+			t.transport = otelhttp.NewTransport(http.DefaultTransport)
+		}
+	} else {
+		t.transport = otelhttp.NewTransport(http.DefaultTransport)
+	}
 	if c.Enabled() {
-		base := &client.Client{Credentials: client.NewCredentials(c.AccountSID, c.AuthToken), HTTPClient: hc}
-		base.SetAccountSid(c.AccountSID)
-		t.rest = twilio.NewRestClientWithParams(twilio.ClientParams{Username: c.AccountSID, Password: c.AuthToken, Client: base})
 		t.validator = client.NewRequestValidator(c.AuthToken)
 	}
 	return t
 }
 
+type contextTransport struct {
+	ctx  context.Context
+	base http.RoundTripper
+}
+
+func (ct *contextTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if ct.ctx != nil {
+		req = req.WithContext(ct.ctx)
+	}
+	return ct.base.RoundTrip(req)
+}
+
+func (t *Twilio) rest(ctx context.Context) *twilio.RestClient {
+	if !t.cfg.Enabled() {
+		return nil
+	}
+	hc := &http.Client{
+		Timeout: t.timeout,
+		Transport: &contextTransport{
+			ctx:  ctx,
+			base: t.transport,
+		},
+	}
+	base := &client.Client{Credentials: client.NewCredentials(t.cfg.AccountSID, t.cfg.AuthToken), HTTPClient: hc}
+	base.SetAccountSid(t.cfg.AccountSID)
+	return twilio.NewRestClientWithParams(twilio.ClientParams{Username: t.cfg.AccountSID, Password: t.cfg.AuthToken, Client: base})
+}
+
 // Send texts body to the E.164 number to through the messaging service.
-func (t *Twilio) Send(_ context.Context, to, body string) (string, error) {
-	if t.rest == nil {
+func (t *Twilio) Send(ctx context.Context, to, body string) (string, error) {
+	rest := t.rest(ctx)
+	if rest == nil {
 		return "", ErrDisabled
 	}
 	params := (&api.CreateMessageParams{}).SetTo(to).SetBody(body).SetMessagingServiceSid(t.cfg.MessagingServiceSID)
-	msg, err := t.rest.Api.CreateMessage(params)
+	msg, err := rest.Api.CreateMessage(params)
 	if err != nil {
 		return "", fmt.Errorf("send sms: %w", err)
 	}
@@ -107,24 +146,26 @@ func (t *Twilio) Send(_ context.Context, to, body string) (string, error) {
 }
 
 // StartVerify texts a login code to phone.
-func (t *Twilio) StartVerify(_ context.Context, phone string) error {
-	if t.rest == nil {
+func (t *Twilio) StartVerify(ctx context.Context, phone string) error {
+	rest := t.rest(ctx)
+	if rest == nil {
 		return ErrDisabled
 	}
 	params := (&verify.CreateVerificationParams{}).SetTo(phone).SetChannel("sms")
-	if _, err := t.rest.VerifyV2.CreateVerification(t.cfg.VerifyServiceSID, params); err != nil {
+	if _, err := rest.VerifyV2.CreateVerification(t.cfg.VerifyServiceSID, params); err != nil {
 		return fmt.Errorf("start verification: %w", err)
 	}
 	return nil
 }
 
 // CheckVerify reports whether code is the one most recently texted to phone.
-func (t *Twilio) CheckVerify(_ context.Context, phone, code string) (bool, error) {
-	if t.rest == nil {
+func (t *Twilio) CheckVerify(ctx context.Context, phone, code string) (bool, error) {
+	rest := t.rest(ctx)
+	if rest == nil {
 		return false, ErrDisabled
 	}
 	params := (&verify.CreateVerificationCheckParams{}).SetTo(phone).SetCode(code)
-	res, err := t.rest.VerifyV2.CreateVerificationCheck(t.cfg.VerifyServiceSID, params)
+	res, err := rest.VerifyV2.CreateVerificationCheck(t.cfg.VerifyServiceSID, params)
 	if err != nil {
 		return false, fmt.Errorf("check verification: %w", err)
 	}
@@ -134,7 +175,7 @@ func (t *Twilio) CheckVerify(_ context.Context, phone, code string) (bool, error
 // ValidRequest checks a webhook's X-Twilio-Signature against its full URL and
 // form parameters.
 func (t *Twilio) ValidRequest(url string, params map[string]string, signature string) bool {
-	if t.rest == nil {
+	if !t.cfg.Enabled() {
 		return false
 	}
 	return t.validator.Validate(url, params, signature)
