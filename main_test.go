@@ -42,3 +42,13 @@ func TestOpenDBRequiresURL(t *testing.T) {
 		t.Fatal("openDB with empty DSN: want error")
 	}
 }
+
+func TestGetenv(t *testing.T) {
+	if got := getenv("NON_EXISTENT_VAR_12345", "default"); got != "default" {
+		t.Errorf("getenv = %q, want %q", got, "default")
+	}
+	t.Setenv("EXISTENT_VAR_12345", "custom")
+	if got := getenv("EXISTENT_VAR_12345", "default"); got != "custom" {
+		t.Errorf("getenv = %q, want %q", got, "custom")
+	}
+}

@@ -81,19 +81,7 @@ func New(c Config) *Twilio {
 }
 
 func newTwilio(c Config, hc *http.Client) *Twilio {
-	t := &Twilio{cfg: c, timeout: 30 * time.Second}
-	if hc != nil {
-		if hc.Timeout > 0 {
-			t.timeout = hc.Timeout
-		}
-		if hc.Transport != nil {
-			t.transport = hc.Transport
-		} else {
-			t.transport = otelhttp.NewTransport(http.DefaultTransport)
-		}
-	} else {
-		t.transport = otelhttp.NewTransport(http.DefaultTransport)
-	}
+	t := &Twilio{cfg: c, timeout: hc.Timeout, transport: hc.Transport}
 	if c.Enabled() {
 		t.validator = client.NewRequestValidator(c.AuthToken)
 	}
