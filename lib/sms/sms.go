@@ -14,6 +14,7 @@ import (
 	"github.com/twilio/twilio-go/client"
 	api "github.com/twilio/twilio-go/rest/api/v2010"
 	verify "github.com/twilio/twilio-go/rest/verify/v2"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // ErrDisabled means Twilio is not configured, so nothing can be texted.
@@ -75,7 +76,7 @@ type Twilio struct {
 
 // New returns a Twilio client for c.
 func New(c Config) *Twilio {
-	return newTwilio(c, &http.Client{Timeout: 30 * time.Second})
+	return newTwilio(c, &http.Client{Timeout: 30 * time.Second, Transport: otelhttp.NewTransport(http.DefaultTransport)})
 }
 
 func newTwilio(c Config, hc *http.Client) *Twilio {

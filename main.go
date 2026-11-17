@@ -20,10 +20,13 @@ import (
 	"go.icco.me/goals/lib/web"
 	"go.icco.me/gutil/httpx"
 	"go.icco.me/gutil/logging"
+	"go.icco.me/gutil/tracing"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	gormtracing "gorm.io/plugin/opentelemetry/tracing"
 )
 
 const service = "goals"
@@ -40,6 +43,18 @@ func main() {
 func run(log *zap.SugaredLogger) error {
 	ctx, stop := signal.NotifyContext(logging.NewContext(context.Background(), log), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	shutdown, err := tracing.Init(ctx, service)
+	if err != nil {
+		return fmt.Errorf("init tracing: %w", err)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdown(shutdownCtx); err != nil {
+			log.Warnw("tracing shutdown", zap.Error(err))
+		}
+	}()
 
 	baseURL := strings.TrimSuffix(os.Getenv("BASE_URL"), "/")
 	if baseURL == "" {
@@ -89,7 +104,14 @@ func openDB(dsn string) (*gorm.DB, error) {
 	if dsn == "" {
 		return nil, errors.New("DATABASE_URL is required")
 	}
-	return gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	if err != nil {
+		return nil, err
+	}
+	if err := db.Use(gormtracing.NewPlugin(gormtracing.WithoutMetrics())); err != nil {
+		return nil, fmt.Errorf("use tracing plugin: %w", err)
+	}
+	return db, nil
 }
 
 func getenv(key, fallback string) string {
@@ -106,5 +128,12 @@ func router(log *zap.Logger, app http.Handler) http.Handler {
 		_, _ = w.Write([]byte("ok"))
 	})
 	r.Mount("/", app)
-	return r
+	return otelhttp.NewHandler(r, "goals", otelhttp.WithFilter(func(req *http.Request) bool {
+		switch req.URL.Path {
+		case "/healthz", "/metrics":
+			return false
+		default:
+			return true
+		}
+	}))
 }
