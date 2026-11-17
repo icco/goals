@@ -1,6 +1,7 @@
 package sms
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha1" //nolint:gosec // Twilio signs webhooks with HMAC-SHA1.
 	"encoding/base64"
@@ -174,5 +175,22 @@ func TestTwilioVerify(t *testing.T) {
 	}
 	if _, err := bad.CheckVerify(t.Context(), "+15555550100", "1"); err == nil {
 		t.Error("CheckVerify error swallowed")
+	}
+}
+
+func TestTwilioContextPropagation(t *testing.T) {
+	type key struct{}
+	ctx := context.WithValue(t.Context(), key{}, "val-123")
+	var capturedCtx context.Context
+	hc := &http.Client{Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
+		capturedCtx = r.Context()
+		return &http.Response{StatusCode: http.StatusCreated, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(`{"sid":"SM1"}`)), Request: r}, nil
+	})}
+	tw := newTwilio(Config{AccountSID: "AC123", AuthToken: "secret", MessagingServiceSID: "MG123", VerifyServiceSID: "VA123"}, hc)
+	if _, err := tw.Send(ctx, "+15555550100", "test"); err != nil {
+		t.Fatal(err)
+	}
+	if capturedCtx == nil || capturedCtx.Value(key{}) != "val-123" {
+		t.Errorf("context value not propagated: %v", capturedCtx)
 	}
 }
