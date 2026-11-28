@@ -94,8 +94,8 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/twilio/twilio-go v1.33.0 h1:qWLLOLn8rcxrDKuwaNp1GATETs31yNqYLGTydEEtkps=
-github.com/twilio/twilio-go v1.33.0/go.mod h1:QbitvbvtkV77Jn4BABAKVmxabYSjMyQG4tHey9gfPqg=
+github.com/twilio/twilio-go v1.33.1 h1:RhHwQW1nk9kxNiunUxkHPYsvL9iPJto8TWaM0+D5Gzc=
+github.com/twilio/twilio-go v1.33.1/go.mod h1:QbitvbvtkV77Jn4BABAKVmxabYSjMyQG4tHey9gfPqg=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
 github.com/xdg-go/scram v1.1.1/go.mod h1:RaEWvsqvNKKvBPvcKeFjrG2cJqOkHTiyTpzz23ni57g=
 github.com/xdg-go/stringprep v1.0.3/go.mod h1:W3f5j4i+9rC0kuIEJL0ky1VpHXQU3ocBgklLGvcBnW8=
